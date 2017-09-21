@@ -1,39 +1,31 @@
-pipeline {
-  agent any
-  stages {
-    stage('Build') {
-      steps {
-        sh 'echo Build'
-      }
-    }
-    stage('Backend') {
-      steps {
-        parallel(
-          "Unit": {
-            sh 'echo Unit'
-            
-          },
-          "Performance": {
-            sh 'echo Performance'
-            
-          }
-        )
-      }
-    }
-    stage('Frontend') {
-      steps {
-        sh 'echo Frontend'
-      }
-    }
-    stage('Static Analysis') {
-      steps {
-        sh 'echo Static Analysis'
-      }
-    }
-    stage('Deploy') {
-      steps {
-        sh 'echo Deploy'
-      }
-    }
+#!groovy
+
+node {
+  def sbtHome = tool 'default-sbt'
+  //def SBT = "${sbtHome}/bin/sbt -Dsbt.log.noformat=true -Dsbt.override.build.repos=true"
+  def SBT = "${sbtHome}/bin/sbt -Dsbt.log.noformat=true"
+
+  def branch = env.BRANCH_NAME
+
+  echo "current branch is ${branch}"
+
+  // Mandatory, to maintain branch integrity
+  checkout scm
+
+  stage('Cleanup') {
+    sh "${SBT} clean"
   }
+
+  stage('Build') {
+    sh "${SBT} package"
+  }
+
+  stage('Publish-Local') {
+    sh "${SBT} publish-local"
+  }
+
+  stage('Archive') {
+    archive 'target/**/test-dep*.jar'
+  }
+
 }
